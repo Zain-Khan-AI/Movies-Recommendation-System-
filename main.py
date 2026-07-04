@@ -3,7 +3,15 @@ import pickle
 import pandas as pd
 import requests
 import os
+import gdown
 
+FILE_ID = "1i1ryfqpvZ7h4jNK4qZI_C6mJcsYlo9WZ"
+OUTPUT = "similarity.pkl"
+
+if not os.path.exists(OUTPUT):
+    print("Downloading similarity.pkl...")
+    url = f"https://drive.google.com/uc?id={FILE_ID}"
+    gdown.download(url, OUTPUT, quiet=False)
 # ==========================================
 # BYPASS LOCAL NETWORK SECURITY RESTRICTIONS
 # ==========================================
