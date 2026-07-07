@@ -240,7 +240,8 @@ try:
     movie_list = get_clean_movie_list(movies)
 
     # ---------- Center Search Box Container (Strict 1-Box Only) ----------
-    left, center, right = st.columns()
+    left, center, right = st.columns([2, 4, 2])
+
 
     with center:
         # 1. Sirf 1 Single Custom Text Input Box (0% Lag, Pure Streamlit Component)
