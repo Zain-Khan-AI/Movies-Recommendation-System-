@@ -234,29 +234,31 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Search Box with Native Dropdown (Single Box Only) ----------
-    left, center, right = st.columns([2, 4, 2])
+        # ---------- Center Search Box with Native Dropdown (Strict Bottom Alignment) ----------
+    left, center, right = st.columns([1, 5, 1])  # Column ratio broad kiya alignment width control k liye
 
     with center:
         # 1. Background HTML DataList options tayar karein
         datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
         
-        # 2. Main Search Bar aur Datalist HTML render karein (0% Lag Fix)
+        # 2. Main Search Bar aur Container Box (Isse drop down right side par nahi bhagega)
         st.markdown(f"""
-            <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
-                🎬 Type or Select a Movie
-            </label>
-            <input list="movies_suggestions" id="movie_input_html" 
-                   placeholder="Type to search (e.g., 'h')..." 
-                   style="width:100%; padding:12px; background:#181818; color:white; 
-                          border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:15px;"
-                   onchange="parent.postMessage({{type: 'streamlit:setComponentValue', value: this.value}}, '*')">
-            <datalist id="movies_suggestions">
-                {datalist_options}
-            </datalist>
+            <div style="position: relative; width: 100%; display: block; text-align: left;">
+                <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
+                    🎬 Type or Select a Movie
+                </label>
+                <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
+                       placeholder="Type to search (e.g., 'h')..." 
+                       style="width:100%; padding:12px; background:#181818; color:white; 
+                              border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:15px;
+                              box-sizing: border-box;">
+                <datalist id="movies_suggestions" style="width: 100%;">
+                    {datalist_options}
+                </datalist>
+            </div>
             
             <script>
-                // Browser value to Streamlit value sync script
+                // Sync browser typed value to Streamlit internal variable
                 var input = document.getElementById('movie_input_html');
                 input.addEventListener('input', function() {{
                     window.parent.postMessage({{
@@ -268,14 +270,14 @@ try:
             </script>
         """, unsafe_allow_html=True)
 
-        # 🔥 CHOTI TRICK: Dusre box ko label_visibility="collapsed" aur empty value ke sath bilkul GAYAB (Invisible) kar diya
+        # Hidden backup input field syncing
         selected_movie = st.text_input(
             "hidden_input", 
             key="movie_verifier", 
             label_visibility="collapsed"
         )
         
-        # CSS se visually completely block kar diya taaki screen par bilkul na dikhe
+        # Hidden component styling override
         st.markdown("""
             <style>
                 div[data-testid="stTextInput"] {
@@ -290,8 +292,6 @@ try:
             "🎬 Show Recommendations",
             use_container_width=True
         )
-
-
 
     if show:
 
