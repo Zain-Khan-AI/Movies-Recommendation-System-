@@ -239,82 +239,52 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Search Box Container (Strict 1-Box Only) ----------
-    left, center, right = st.columns([2, 4, 2])
-
+    # ---------- Center Search Box Container (Perfect 1-Box Auto-Suggest) ----------
+    left, center, right = st.columns([1, 4, 1])
 
     with center:
-        # 1. Sirf 1 Single Custom Text Input Box (0% Lag, Pure Streamlit Component)
-        selected_movie = st.text_input(
-            "🎬 Type Movie Name Here", 
-            placeholder="Type exact name (e.g., Avatar, Spider-Man, Hulk...)"
+        st.markdown('<label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">🎬 Type or Select a Movie</label>', unsafe_allow_html=True)
+        
+        # 1. Pehle user se sirf text input lenge (Isse click par lag completely 0% ho jata hai)
+        search_query = st.text_input(
+            "Search Input Box", 
+            placeholder="Type to search (e.g., 'h' or 'Avatar')...",
+            label_visibility="collapsed"
         )
+
+        selected_movie = None
+
+        # 2. Agar user kuch type karega, toh dynamic dropdown neeche khulega (Bina kisi lag ke)
+        if search_query and search_query.strip() != "":
+            # Pure dataset ko user ke typed characters par instant filter karenge
+            filtered_movies = [m for m in movie_list if search_query.lower() in m.lower()]
+            
+            if filtered_movies:
+                # Sirf matching movies ka instant dropdown samne aayega (Limit 30 tak taaki browser crash na ho)
+                selected_movie = st.selectbox(
+                    "🎯 Matching results (Select your movie):",
+                    options=filtered_movies[:30]
+                )
+            else:
+                st.warning("⚠️ No matching movies found. Check spelling!")
+        else:
+            st.info("💡 Type a letter above (e.g., 'h') to instantly see the movie list below.")
 
         st.markdown("<br>", unsafe_allow_html=True)
         show = st.button("🎬 Show Recommendations", use_container_width=True)
 
     if show:
-        # Check karein ke user ne box khali toh nahi choda
-        if not selected_movie or selected_movie.strip() == "":
-            st.warning("⚠️ Please type a movie name first!")
-        else:
-            # Sahi string string match cleanup
-            movie_query = selected_movie.strip()
-            
-            # Pure dataset mein match check karne ka safe logic
-            # Agar user ne 'avatar' chota likha ho toh lowercase match karega
-            matching_movies = movies[movies['title'].str.lower() == movie_query.lower()]
-            
-            if matching_movies.empty:
-                st.error("❌ Movie name match nahi hua! Please check the spelling and type the exact name (e.g., 'Avatar').")
-            else:
-                # Agar name perfect mil jata hai toh actual title extract karein
-                exact_title = matching_movies.iloc[0]['title']
-                
-                # Bouncing loading circle execution element
-                st.markdown("""
-                <style>
-                .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
-                .loading span { display: inline-block; animation: bounce 1.4s infinite; }
-                .loading span:nth-child(2) { animation-delay: 0.2s; }
-                .loading span:nth-child(3) { animation-delay: 0.4s; }
-                @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
-                </style>
-                """, unsafe_allow_html=True)
-
-                loading = st.empty()
-                loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
-                
-                # Safe recommendation function execute call
-                names, posters = recommend(exact_title)
-                loading.empty()
-
-                cols = st.columns(5)
-                for i in range(5):
-                    with cols[i]:
-                        st.markdown(
-                            f"""
-                            <div class="movie-card">
-                                <img src="{posters[i]}">
-                                <div class="movie-title">{names[i]}</div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-
-
-    if show:
-        # Check karein ke input khali toh nahi hai
-        if not selected_movie or selected_movie.strip() == "":
-            st.warning("⚠️ Please select or type a movie name first!")
+        # Check karein ke movie properly select hui hai ya nahi
+        if not selected_movie:
+            st.error("❌ Please select a movie from the matching results dropdown first!")
         else:
             # Code crash se bachne ke liye safe recommendation call karein
             names, posters = recommend(selected_movie)
             
             if names is None:
-                st.error("❌ Movie name match nahi hua! Please dropdown se sahi aur poora naam select karein.")
+                st.error("❌ Recommendation failed. Please try another movie.")
             else:
-                # Loading animation aur baqi posters display ka code yahan chalega
+                # Loading animation aur posters display ka code
                 st.markdown("""
                 <style>
                 .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
@@ -343,10 +313,9 @@ try:
                             unsafe_allow_html=True
                         )
 
-
 except FileNotFoundError:
-
     st.error("❌ movie_dict.pkl ya similarity.pkl file nahi mili.")
+
 
 
 st.markdown("""
