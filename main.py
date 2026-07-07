@@ -239,107 +239,57 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Search Box with Custom Wide Dropdown ----------
+    # ---------- Center Search Box Container (Strict 1-Box with HTML Datalist) ----------
     left, center, right = st.columns([1, 4, 1])
 
     with center:
-        # Browser background logic for wide suggestions block
+        # 1. Background HTML DataList options tayar karein
+        datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
+        
+        # 2. Wahi bina lag wali single HTML list jo strictly bar ke neeche khulegi
         st.markdown(f"""
-            <div style="position: relative; width: 100%; text-align: left; box-sizing: border-box;">
+            <div style="position: relative; width: 100%; display: block; text-align: left;">
                 <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
                     🎬 Type or Select a Movie
                 </label>
-                
-                <!-- Main Search Bar -->
-                <input type="text" id="movie_input_html" autocomplete="off"
+                <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
                        placeholder="Type movie name here (e.g., 'Avatar' or 'h')..." 
-                       style="width:100%; padding:14px; background:#181818; color:white; 
-                              border:1px solid #444; border-radius:8px; font-size:16px; box-sizing: border-box;">
-                
-                <!-- Custom Dropdown Container - ISSI KI WIDTH EXACT 100% BAR KE BARABAR HOGI -->
-                <div id="custom_dropdown" style="display: none; position: absolute; top: 100%; left: 0; 
-                     width: 100%; max-height: 250px; overflow-y: auto; background: #181818; 
-                     border: 1px solid #444; border-top: none; border-radius: 0 0 8px 8px; z-index: 9999; 
-                     box-sizing: border-box; box-shadow: 0px 8px 16px rgba(0,0,0,0.5);">
-                </div>
+                       style="width:100%; padding:12px; background:#181818; color:white; 
+                              border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:5px;
+                              box-sizing: border-box;">
+                <datalist id="movies_suggestions" style="width: 100%;">
+                    {datalist_options}
+                </datalist>
             </div>
-
-            <script>
-                // Movie list string list parsing array
-                const movies = {list(movie_list)};
-                const input = document.getElementById('movie_input_html');
-                const dropdown = document.getElementById('custom_dropdown');
-
-                // Dynamic matching array loop inside frontend JavaScript (0% Server Lag)
-                input.addEventListener('input', function() {{
-                    const val = this.value.toLowerCase();
-                    dropdown.innerHTML = '';
-                    
-                    if (!val) {{
-                        dropdown.style.display = 'none';
-                        return;
-                    }}
-
-                    // Match filter logic
-                    const matches = movies.filter(m => m.toLowerCase().includes(val)).slice(0, 15);
-
-                    if (matches.length > 0) {{
-                        matches.forEach(match => {{
-                            const item = document.createElement('div');
-                            item.textContent = match;
-                            item.style.padding = '12px 15px';
-                            item.style.cursor = 'pointer';
-                            item.style.color = 'white';
-                            item.style.borderBottom = '1px solid #222';
-                            item.style.fontSize = '15px';
-                            
-                            // Hover element overlay styling
-                            item.addEventListener('mouseenter', function() {{
-                                this.style.background = '#E50914';
-                            }});
-                            item.addEventListener('mouseleave', function() {{
-                                this.style.background = 'transparent';
-                            }});
-                            
-                            // When click option, lock value
-                            item.addEventListener('click', function() {{
-                                input.value = match;
-                                dropdown.style.display = 'none';
-                                
-                                // Streamlit message parameters bridge trigger
-                                window.parent.postMessage({{
-                                    isStreamlitMessage: true,
-                                    type: 'streamlit:setComponentValue',
-                                    value: match
-                                }}, '*');
-                            }});
-                            dropdown.appendChild(item);
-                        }});
-                        dropdown.style.display = 'block';
-                    }} else {{
-                        dropdown.style.display = 'none';
-                    }}
-                }});
-
-                // Close dropdown if user clicks outside the workspace container
-                document.addEventListener('click', function(e) {{
-                    if (e.target !== input) {{
-                        dropdown.style.display = 'none';
-                    }}
-                }});
-            </script>
         """, unsafe_allow_html=True)
 
-        # Invisible query param backend value storage element
-        selected_movie = st.text_input("hidden_query", key="movie_bridge", label_visibility="collapsed")
-        st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
+        # 3. 🔥 UPDATE: Streamlit Query Params Hack (Yeh data bina block hue seedha Python tak layega)
+        # JavaScript ab selected name ko page URL params me sync karegi, jo cross-origin block nahi hota
+        import streamlit.components.v1 as components
+        components.html("""
+            <script>
+                var input = window.parent.document.getElementById('movie_input_html');
+                if (input) {
+                    input.addEventListener('change', function() {
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('movie_choice', this.value);
+                        window.parent.history.replaceState({}, '', url.toString());
+                    });
+                    input.addEventListener('input', function() {
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('movie_choice', this.value);
+                        window.parent.history.replaceState({}, '', url.toString());
+                    });
+                }
+            </script>
+        """, height=0, width=0)
+
+        # Python direct browser URL parameter se movie ka naam read karega (No Hidden Boxes!)
+        query_params = st.query_params
+        selected_movie = query_params.get("movie_choice", "")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        show = st.button(
-            "🎬 Show Recommendations",
-            use_container_width=True
-        )
-
+        show = st.button("🎬 Show Recommendations", use_container_width=True)
 
     if show:
         # Check karein ke variable khali toh nahi hai
@@ -391,6 +341,7 @@ try:
 
 except FileNotFoundError:
     st.error("❌ movie_dict.pkl ya similarity.pkl file nahi mili.")
+
 
 
 
