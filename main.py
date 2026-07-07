@@ -247,17 +247,19 @@ try:
         datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
         
         # 2. Wahi bina lag wali single HTML list jo strictly bar ke neeche khulegi
+        # 2. Updated HTML List with Broad Responsive Width Styling
         st.markdown(f"""
-            <div style="position: relative; width: 100%; display: block; text-align: left;">
-                <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
+            <div style="position: relative; width: 100%; max-width: 100%; display: block; text-align: left; box-sizing: border-box;">
+                <label style="font-weight:bold; font-size:18px; color:white; display:block; margin-bottom:10px;">
                     🎬 Type or Select a Movie
                 </label>
                 <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
                        placeholder="Type movie name here (e.g., 'Avatar' or 'h')..." 
-                       style="width:100%; padding:12px; background:#181818; color:white; 
-                              border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:5px;
-                              box-sizing: border-box;">
-                <datalist id="movies_suggestions" style="width: 100%;">
+                       style="width: 100%; padding: 15px; background: #181818; color: white; 
+                              border: 1px solid #444; border-radius: 8px; font-size: 18px; margin-bottom: 5px;
+                              box-sizing: border-box; display: block; min-width: 100%;">
+                
+                <datalist id="movies_suggestions" style="width: 100%; min-width: 100%;">
                     {datalist_options}
                 </datalist>
             </div>
