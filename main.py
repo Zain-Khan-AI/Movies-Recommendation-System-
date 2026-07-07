@@ -240,14 +240,15 @@ try:
     movie_list = get_clean_movie_list(movies)
 
     # ---------- Center Search Box Container (Strict 1-Box with Autocomplete List) ----------
-    left, center, right = st.columns()
+    # Fixed: Brackets ke andar [1, 4, 1] daal diya taaki Streamlit Cloud par TypeError crash na ho
+    left, center, right = st.columns([1, 4, 1])
 
     with center:
         # 1. Background HTML DataList options banayein
         datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
         
         # 2. Sirf 1 Main Input Box aur Datalist HTML render karein
-        # Isme default style override ki hai taaki dropdown strictly box ke neeche align ho
+        # position relative aur width 100% dropdown ko strictly box ke neeche lock rakhegi
         st.markdown(f"""
             <div style="position: relative; width: 100%; display: block; text-align: left;">
                 <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
@@ -265,7 +266,6 @@ try:
         """, unsafe_allow_html=True)
 
         # 3. Streamlit JavaScript Session State Bridge (0% Lag Optimization)
-        # Yeh script user ki select ki hui movie ko direct Python variable ke sath lock kar degi
         import streamlit.components.v1 as components
         components.html("""
             <script>
@@ -282,7 +282,7 @@ try:
             </script>
         """, height=0, width=0)
 
-        # Hidden backup query bridge (Screen par bilkul nazar nahi aayega)
+        # Invisible backup container bridge for variable saving
         selected_movie = st.text_input("hidden_query", key="movie_bridge", label_visibility="collapsed")
         st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
@@ -290,17 +290,15 @@ try:
         show = st.button("🎬 Show Recommendations", use_container_width=True)
 
     if show:
-        # Check karein ke variable khali toh nahi hai
         if not selected_movie or str(selected_movie).strip() == "" or selected_movie is True:
             st.warning("⚠️ Please type or select a valid movie name first from the list!")
         else:
             movie_query = str(selected_movie).strip()
             
-            # Safe dataset checking to avoid IndexError crashes
+            # Case insensitive match checking to secure data index lookup
             matching_movies = movies[movies['title'].str.lower() == movie_query.lower()]
             
             if matching_movies.empty:
-                # Agar user adha naam likh kar click kar de toh user ko warning dein
                 st.error("❌ Movie name match nahi hua! Please list me se kisi movie ka poora naam type ya select karein.")
             else:
                 exact_title = matching_movies.iloc[0]['title']
@@ -309,7 +307,7 @@ try:
                 if names is None:
                     st.error("❌ Recommendation system load nahi ho saka. Dobara koshish karein.")
                 else:
-                    # Loading animation aur posters display ka code
+                    # Netflix-style bouncing loading circle
                     st.markdown("""
                     <style>
                     .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
@@ -340,6 +338,7 @@ try:
 
 except FileNotFoundError:
     st.error("❌ movie_dict.pkl ya similarity.pkl file nahi mili.")
+
 
 
 
