@@ -234,17 +234,31 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Select Box ----------
+    # ---------- Center Select Box & Autocomplete Hack ----------
     left, center, right = st.columns([2, 4, 2])
 
-
     with center:
-        selected_movie = st.selectbox(
-    "🎬 Select a Movie",
-    options=movie_list,
-    filter_mode="contains"
-)
+        # 1. Pehle user se input box mein naam type karwayenge (Isse click par lag 0% ho jayega)
+        search_query = st.text_input("🍿 Search Movie Name Here (Type characters e.g., 'h'):")
 
+        # 2. Agar user ne kuch type kiya hai, toh list ko filter karenge
+        if search_query:
+            # Sirf wahi movies filter hongi jismein user ka type kiya hua character hoga
+            filtered_movies = [movie for movie in movie_list if search_query.lower() in movie.lower()]
+            
+            if filtered_movies:
+                # Agar movies mil gayin, toh filtered dropdown samne aayega (Maximum 20 options taaki freeze na ho)
+                selected_movie = st.selectbox(
+                    "🎯 Select the exact movie from matches:", 
+                    options=filtered_movies[:20]
+                )
+            else:
+                st.warning("⚠️ No matching movies found. Check spelling!")
+                selected_movie = None
+        else:
+            # Agar box khali hai toh dropdown gayab rahega aur user ko message dikhega
+            st.info("💡 Type above to see movie recommendations in dropdown.")
+            selected_movie = None
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -252,6 +266,7 @@ try:
             "🎬 Show Recommendations",
             use_container_width=True
         )
+
 
     if show:
 
