@@ -131,7 +131,7 @@ div[data-baseweb="select"] > div{
 
 
 # ==========================================
-# FETCH POSTER
+# FETCH POSTER    
 # ==========================================
 def fetch_poster(movie_id):
     api_key = "8265bd1679663a7ea12ac168da84d2e8"
@@ -161,6 +161,18 @@ def fetch_poster(movie_id):
 def get_clean_movie_list(movies_df):
     # Convert numpy array/pandas series to pure Python list (Lag fix karega)
     return list(movies_df["title"].values)
+# ==========================================
+# 🔥 SMART FILE LOADING (Yeh har click par reload hone se bachaega)
+# ==========================================
+@st.cache_resource
+def load_base_files():
+    try:
+        m_dict = pickle.load(open("movie_dict.pkl", "rb"))
+        m_df = pd.DataFrame(m_dict)
+        sim_matrix = pickle.load(open("similarity.pkl", "rb"))
+        return m_df, sim_matrix
+    except Exception as e:
+        return None, None
 
 # ==========================================
 # RECOMMEND FUNCTION
@@ -215,10 +227,9 @@ margin-bottom:25px;">
 # LOAD PICKLE FILES
 # ==========================================
 try:
-    movies_dict = pickle.load(open("movie_dict.pkl", "rb"))
-    movies = pd.DataFrame(movies_dict)
+    
+    movies, similarity = load_base_files()
 
-    similarity = pickle.load(open("similarity.pkl", "rb"))
 
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
@@ -228,11 +239,12 @@ try:
 
 
     with center:
-
         selected_movie = st.selectbox(
-            "🎬 Select a Movie",
-            movie_list
-        )
+    "🎬 Select a Movie",
+    options=movie_list,
+    filter_mode="contains"
+)
+
 
         st.markdown("<br>", unsafe_allow_html=True)
 
