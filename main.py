@@ -239,64 +239,68 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-        # ---------- Center Search Box with Native Dropdown (Strict Bottom Alignment) ----------
-    left, center, right = st.columns([1, 5, 1])  # Column ratio broad kiya alignment width control k liye
+    # ---------- Center Search Box Container (Strict 1-Box Only) ----------
+    left, center, right = st.columns()
 
     with center:
-        # 1. Background HTML DataList options tayar karein
-        datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
-        
-        # 2. Main Search Bar aur Container Box (Isse drop down right side par nahi bhagega)
-        st.markdown(f"""
-            <div style="position: relative; width: 100%; display: block; text-align: left;">
-                <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
-                    🎬 Type or Select a Movie
-                </label>
-                <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
-                       placeholder="Type to search (e.g., 'avatar')..." 
-                       style="width:100%; padding:12px; background:#181818; color:white; 
-                              border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:15px;
-                              box-sizing: border-box;">
-                <datalist id="movies_suggestions" style="width: 100%;">
-                    {datalist_options}
-                </datalist>
-            </div>
-            
-            <script>
-                // Sync browser typed value to Streamlit internal variable
-                var input = document.getElementById('movie_input_html');
-                input.addEventListener('input', function() {{
-                    window.parent.postMessage({{
-                        isStreamlitMessage: true,
-                        type: 'streamlit:setComponentValue',
-                        value: this.value
-                    }}, '*');
-                }});
-            </script>
-        """, unsafe_allow_html=True)
-
-        # Hidden backup input field syncing
+        # 1. Sirf 1 Single Custom Text Input Box (0% Lag, Pure Streamlit Component)
         selected_movie = st.text_input(
-            "hidden_input", 
-            key="movie_verifier", 
-            label_visibility="collapsed"
+            "🎬 Type Movie Name Here", 
+            placeholder="Type exact name (e.g., Avatar, Spider-Man, Hulk...)"
         )
-        
-        # Hidden component styling override
-        st.markdown("""
-            <style>
-                div[data-testid="stTextInput"] {
-                    display: none !important;
-                }
-            </style>
-        """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
+        show = st.button("🎬 Show Recommendations", use_container_width=True)
 
-        show = st.button(
-            "🎬 Show Recommendations",
-            use_container_width=True
-        )
+    if show:
+        # Check karein ke user ne box khali toh nahi choda
+        if not selected_movie or selected_movie.strip() == "":
+            st.warning("⚠️ Please type a movie name first!")
+        else:
+            # Sahi string string match cleanup
+            movie_query = selected_movie.strip()
+            
+            # Pure dataset mein match check karne ka safe logic
+            # Agar user ne 'avatar' chota likha ho toh lowercase match karega
+            matching_movies = movies[movies['title'].str.lower() == movie_query.lower()]
+            
+            if matching_movies.empty:
+                st.error("❌ Movie name match nahi hua! Please check the spelling and type the exact name (e.g., 'Avatar').")
+            else:
+                # Agar name perfect mil jata hai toh actual title extract karein
+                exact_title = matching_movies.iloc[0]['title']
+                
+                # Bouncing loading circle execution element
+                st.markdown("""
+                <style>
+                .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
+                .loading span { display: inline-block; animation: bounce 1.4s infinite; }
+                .loading span:nth-child(2) { animation-delay: 0.2s; }
+                .loading span:nth-child(3) { animation-delay: 0.4s; }
+                @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
+                </style>
+                """, unsafe_allow_html=True)
+
+                loading = st.empty()
+                loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
+                
+                # Safe recommendation function execute call
+                names, posters = recommend(exact_title)
+                loading.empty()
+
+                cols = st.columns(5)
+                for i in range(5):
+                    with cols[i]:
+                        st.markdown(
+                            f"""
+                            <div class="movie-card">
+                                <img src="{posters[i]}">
+                                <div class="movie-title">{names[i]}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
 
     if show:
         # Check karein ke input khali toh nahi hai
