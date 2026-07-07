@@ -153,6 +153,13 @@ def fetch_poster(movie_id):
     except:
         return "https://via.placeholder.com/500x750?text=No+Poster"
 
+# ==========================================
+# CACHE DATA FOR FAST DROPDOWN (Add this new function)
+# ==========================================
+@st.cache_data
+def get_clean_movie_list(movies_df):
+    # Convert numpy array/pandas series to pure Python list (Lag fix karega)
+    return list(movies_df["title"].values)
 
 # ==========================================
 # RECOMMEND FUNCTION
@@ -205,17 +212,21 @@ margin-bottom:25px;">
 # ==========================================
 # LOAD PICKLE FILES
 # ==========================================
+# ==========================================
+# LOAD PICKLE FILES
+# ==========================================
 try:
-
     movies_dict = pickle.load(open("movie_dict.pkl", "rb"))
     movies = pd.DataFrame(movies_dict)
 
     similarity = pickle.load(open("similarity.pkl", "rb"))
 
-    movie_list = movies["title"].values
+    # 🔥 CHANGE HERE: Standard list call karein function ke zariye
+    movie_list = get_clean_movie_list(movies)
 
     # ---------- Center Select Box ----------
     left, center, right = st.columns([2, 4, 2])
+
 
     with center:
 
