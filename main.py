@@ -239,82 +239,108 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Search Box Container (Perfect 1-Box Auto-Suggest) ----------
-    left, center, right = st.columns([1, 4, 1])
+    # ---------- Center Search Box Container (Strict 1-Box with Autocomplete List) ----------
+    left, center, right = st.columns()
 
     with center:
-        st.markdown('<label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">🎬 Type or Select a Movie</label>', unsafe_allow_html=True)
+        # 1. Background HTML DataList options banayein
+        datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
         
-        # 1. Pehle user se sirf text input lenge (Isse click par lag completely 0% ho jata hai)
-        search_query = st.text_input(
-            "Search Input Box", 
-            placeholder="Type to search (e.g., 'h' or 'Avatar')...",
-            label_visibility="collapsed"
-        )
+        # 2. Sirf 1 Main Input Box aur Datalist HTML render karein
+        # Isme default style override ki hai taaki dropdown strictly box ke neeche align ho
+        st.markdown(f"""
+            <div style="position: relative; width: 100%; display: block; text-align: left;">
+                <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
+                    🎬 Type or Select a Movie
+                </label>
+                <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
+                       placeholder="Type movie name here (e.g., 'Avatar' or 'h')..." 
+                       style="width:100%; padding:12px; background:#181818; color:white; 
+                              border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:5px;
+                              box-sizing: border-box;">
+                <datalist id="movies_suggestions" style="width: 100%;">
+                    {datalist_options}
+                </datalist>
+            </div>
+        """, unsafe_allow_html=True)
 
-        selected_movie = None
+        # 3. Streamlit JavaScript Session State Bridge (0% Lag Optimization)
+        # Yeh script user ki select ki hui movie ko direct Python variable ke sath lock kar degi
+        import streamlit.components.v1 as components
+        components.html("""
+            <script>
+                var input = window.parent.document.getElementById('movie_input_html');
+                if (input) {
+                    input.addEventListener('input', function() {
+                        window.parent.postMessage({
+                            isStreamlitMessage: true,
+                            type: 'streamlit:setComponentValue',
+                            value: this.value
+                        }, '*');
+                    });
+                }
+            </script>
+        """, height=0, width=0)
 
-        # 2. Agar user kuch type karega, toh dynamic dropdown neeche khulega (Bina kisi lag ke)
-        if search_query and search_query.strip() != "":
-            # Pure dataset ko user ke typed characters par instant filter karenge
-            filtered_movies = [m for m in movie_list if search_query.lower() in m.lower()]
-            
-            if filtered_movies:
-                # Sirf matching movies ka instant dropdown samne aayega (Limit 30 tak taaki browser crash na ho)
-                selected_movie = st.selectbox(
-                    "🎯 Matching results (Select your movie):",
-                    options=filtered_movies[:30]
-                )
-            else:
-                st.warning("⚠️ No matching movies found. Check spelling!")
-        else:
-            st.info("💡 Type a letter above (e.g., 'h') to instantly see the movie list below.")
+        # Hidden backup query bridge (Screen par bilkul nazar nahi aayega)
+        selected_movie = st.text_input("hidden_query", key="movie_bridge", label_visibility="collapsed")
+        st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         show = st.button("🎬 Show Recommendations", use_container_width=True)
 
     if show:
-        # Check karein ke movie properly select hui hai ya nahi
-        if not selected_movie:
-            st.error("❌ Please select a movie from the matching results dropdown first!")
+        # Check karein ke variable khali toh nahi hai
+        if not selected_movie or str(selected_movie).strip() == "" or selected_movie is True:
+            st.warning("⚠️ Please type or select a valid movie name first from the list!")
         else:
-            # Code crash se bachne ke liye safe recommendation call karein
-            names, posters = recommend(selected_movie)
+            movie_query = str(selected_movie).strip()
             
-            if names is None:
-                st.error("❌ Recommendation failed. Please try another movie.")
+            # Safe dataset checking to avoid IndexError crashes
+            matching_movies = movies[movies['title'].str.lower() == movie_query.lower()]
+            
+            if matching_movies.empty:
+                # Agar user adha naam likh kar click kar de toh user ko warning dein
+                st.error("❌ Movie name match nahi hua! Please list me se kisi movie ka poora naam type ya select karein.")
             else:
-                # Loading animation aur posters display ka code
-                st.markdown("""
-                <style>
-                .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
-                .loading span { display: inline-block; animation: bounce 1.4s infinite; }
-                .loading span:nth-child(2) { animation-delay: 0.2s; }
-                .loading span:nth-child(3) { animation-delay: 0.4s; }
-                @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
-                </style>
-                """, unsafe_allow_html=True)
-
-                loading = st.empty()
-                loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
+                exact_title = matching_movies.iloc[0]['title']
+                names, posters = recommend(exact_title)
                 
-                loading.empty()
+                if names is None:
+                    st.error("❌ Recommendation system load nahi ho saka. Dobara koshish karein.")
+                else:
+                    # Loading animation aur posters display ka code
+                    st.markdown("""
+                    <style>
+                    .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
+                    .loading span { display: inline-block; animation: bounce 1.4s infinite; }
+                    .loading span:nth-child(2) { animation-delay: 0.2s; }
+                    .loading span:nth-child(3) { animation-delay: 0.4s; }
+                    @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
+                    </style>
+                    """, unsafe_allow_html=True)
 
-                cols = st.columns(5)
-                for i in range(5):
-                    with cols[i]:
-                        st.markdown(
-                            f"""
-                            <div class="movie-card">
-                                <img src="{posters[i]}">
-                                <div class="movie-title">{names[i]}</div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
+                    loading = st.empty()
+                    loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
+                    
+                    loading.empty()
+
+                    cols = st.columns(5)
+                    for i in range(5):
+                        with cols[i]:
+                            st.markdown(
+                                f"""
+                                <div class="movie-card">
+                                    <img src="{posters[i]}">
+                                    <div class="movie-title">{names[i]}</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
 
 except FileNotFoundError:
     st.error("❌ movie_dict.pkl ya similarity.pkl file nahi mili.")
+
 
 
 
