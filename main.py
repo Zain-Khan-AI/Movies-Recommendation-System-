@@ -239,67 +239,105 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Search Box Container (Perfect 1-Box System) ----------
+    # ---------- Center Search Box Container (Strict 1-Box with HTML Datalist) ----------
     left, center, right = st.columns([1, 4, 1])
 
     with center:
-        st.markdown('<label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">🎬 Type or Select a Movie</label>', unsafe_allow_html=True)
+        # 1. Background HTML DataList options tayar karein
+        datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
         
-        # Super-Smart Trick: Pehle index par khali jagah rakh di taaki click par lag bilkul 0% ho jaye
-        optimized_list = [""] + movie_list
+        # 2. Wahi bina lag wali single HTML list jo strictly bar ke neeche khulegi
+        st.markdown(f"""
+            <div style="position: relative; width: 100%; display: block; text-align: left;">
+                <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
+                    🎬 Type or Select a Movie
+                </label>
+                <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
+                       placeholder="Type movie name here (e.g., 'Avatar' or 'h')..." 
+                       style="width:100%; padding:12px; background:#181818; color:white; 
+                              border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:5px;
+                              box-sizing: border-box;">
+                <datalist id="movies_suggestions" style="width: 100%;">
+                    {datalist_options}
+                </datalist>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # Sirf 1 single native box jo seedha value lock karega bina kisi crash ya warning ke
-        selected_movie = st.selectbox(
-            "Movie Selector Box",
-            options=optimized_list,
-            label_visibility="collapsed",
-            index=0,
-            placeholder="Type to search (e.g., 'Avatar' or 'h')..."
-        )
+        # 3. 🔥 UPDATE: Streamlit Query Params Hack (Yeh data bina block hue seedha Python tak layega)
+        # JavaScript ab selected name ko page URL params me sync karegi, jo cross-origin block nahi hota
+        import streamlit.components.v1 as components
+        components.html("""
+            <script>
+                var input = window.parent.document.getElementById('movie_input_html');
+                if (input) {
+                    input.addEventListener('change', function() {
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('movie_choice', this.value);
+                        window.parent.history.replaceState({}, '', url.toString());
+                    });
+                    input.addEventListener('input', function() {
+                        const url = new URL(window.parent.location.href);
+                        url.searchParams.set('movie_choice', this.value);
+                        window.parent.history.replaceState({}, '', url.toString());
+                    });
+                }
+            </script>
+        """, height=0, width=0)
+
+        # Python direct browser URL parameter se movie ka naam read karega (No Hidden Boxes!)
+        query_params = st.query_params
+        selected_movie = query_params.get("movie_choice", "")
 
         st.markdown("<br>", unsafe_allow_html=True)
         show = st.button("🎬 Show Recommendations", use_container_width=True)
 
     if show:
-        # Check karein ke user ne kuch select kiya hai ya nahi
-        if not selected_movie or selected_movie.strip() == "":
-            st.warning("⚠️ Please select or type a valid movie name first from the list!")
+        # Check karein ke variable khali toh nahi hai
+        if not selected_movie or str(selected_movie).strip() == "":
+            st.warning("⚠️ Please type or select a valid movie name from the suggestion list first!")
         else:
-            # Sahi data query setup
-            movie_query = selected_movie.strip()
-            names, posters = recommend(movie_query)
+            movie_query = str(selected_movie).strip()
             
-            if names is None:
-                st.error("❌ Recommendation failed. Please try another movie.")
+            # Safe dataset checking to avoid IndexError crashes
+            matching_movies = movies[movies['title'].str.lower() == movie_query.lower()]
+            
+            if matching_movies.empty:
+                st.error("❌ Movie name match nahi hua! Please list me se kisi movie ka poora naam select ya exact type karein.")
             else:
-                # Loading animation aur posters display ka code
-                st.markdown("""
-                <style>
-                .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
-                .loading span { display: inline-block; animation: bounce 1.4s infinite; }
-                .loading span:nth-child(2) { animation-delay: 0.2s; }
-                .loading span:nth-child(3) { animation-delay: 0.4s; }
-                @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
-                </style>
-                """, unsafe_allow_html=True)
-
-                loading = st.empty()
-                loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
+                exact_title = matching_movies.iloc[0]['title']
+                names, posters = recommend(exact_title)
                 
-                loading.empty()
+                if names is None:
+                    st.error("❌ Recommendation system load nahi ho saka. Dobara koshish karein.")
+                else:
+                    # Netflix-style bouncing loading animation
+                    st.markdown("""
+                    <style>
+                    .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
+                    .loading span { display: inline-block; animation: bounce 1.4s infinite; }
+                    .loading span:nth-child(2) { animation-delay: 0.2s; }
+                    .loading span:nth-child(3) { animation-delay: 0.4s; }
+                    @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
+                    </style>
+                    """, unsafe_allow_html=True)
 
-                cols = st.columns(5)
-                for i in range(5):
-                    with cols[i]:
-                        st.markdown(
-                            f"""
-                            <div class="movie-card">
-                                <img src="{posters[i]}">
-                                <div class="movie-title">{names[i]}</div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
+                    loading = st.empty()
+                    loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
+                    
+                    loading.empty()
+
+                    cols = st.columns(5)
+                    for i in range(5):
+                        with cols[i]:
+                            st.markdown(
+                                f"""
+                                <div class="movie-card">
+                                    <img src="{posters[i]}">
+                                    <div class="movie-title">{names[i]}</div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
 
 except FileNotFoundError:
     st.error("❌ movie_dict.pkl ya similarity.pkl file nahi mili.")
