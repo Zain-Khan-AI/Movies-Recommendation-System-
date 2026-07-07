@@ -239,105 +239,71 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Search Box Container (Strict 1-Box with Autocomplete List) ----------
-    # Fixed: Brackets ke andar [1, 4, 1] daal diya taaki Streamlit Cloud par TypeError crash na ho
+    # ---------- Center Search Box Container (Perfect 1-Box System) ----------
     left, center, right = st.columns([1, 4, 1])
 
     with center:
-        # 1. Background HTML DataList options banayein
-        datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
+        st.markdown('<label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">🎬 Type or Select a Movie</label>', unsafe_allow_html=True)
         
-        # 2. Sirf 1 Main Input Box aur Datalist HTML render karein
-        # position relative aur width 100% dropdown ko strictly box ke neeche lock rakhegi
-        st.markdown(f"""
-            <div style="position: relative; width: 100%; display: block; text-align: left;">
-                <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
-                    🎬 Type or Select a Movie
-                </label>
-                <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
-                       placeholder="Type movie name here (e.g., 'Avatar' or 'h')..." 
-                       style="width:100%; padding:12px; background:#181818; color:white; 
-                              border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:5px;
-                              box-sizing: border-box;">
-                <datalist id="movies_suggestions" style="width: 100%;">
-                    {datalist_options}
-                </datalist>
-            </div>
-        """, unsafe_allow_html=True)
+        # Super-Smart Trick: Pehle index par khali jagah rakh di taaki click par lag bilkul 0% ho jaye
+        optimized_list = [""] + movie_list
 
-        # 3. Streamlit JavaScript Session State Bridge (0% Lag Optimization)
-        import streamlit.components.v1 as components
-        components.html("""
-            <script>
-                var input = window.parent.document.getElementById('movie_input_html');
-                if (input) {
-                    input.addEventListener('input', function() {
-                        window.parent.postMessage({
-                            isStreamlitMessage: true,
-                            type: 'streamlit:setComponentValue',
-                            value: this.value
-                        }, '*');
-                    });
-                }
-            </script>
-        """, height=0, width=0)
-
-        # Invisible backup container bridge for variable saving
-        selected_movie = st.text_input("hidden_query", key="movie_bridge", label_visibility="collapsed")
-        st.markdown("<style>div[data-testid='stTextInput'] { display: none !important; }</style>", unsafe_allow_html=True)
+        # Sirf 1 single native box jo seedha value lock karega bina kisi crash ya warning ke
+        selected_movie = st.selectbox(
+            "Movie Selector Box",
+            options=optimized_list,
+            label_visibility="collapsed",
+            index=0,
+            placeholder="Type to search (e.g., 'Avatar' or 'h')..."
+        )
 
         st.markdown("<br>", unsafe_allow_html=True)
         show = st.button("🎬 Show Recommendations", use_container_width=True)
 
     if show:
-        if not selected_movie or str(selected_movie).strip() == "" or selected_movie is True:
-            st.warning("⚠️ Please type or select a valid movie name first from the list!")
+        # Check karein ke user ne kuch select kiya hai ya nahi
+        if not selected_movie or selected_movie.strip() == "":
+            st.warning("⚠️ Please select or type a valid movie name first from the list!")
         else:
-            movie_query = str(selected_movie).strip()
+            # Sahi data query setup
+            movie_query = selected_movie.strip()
+            names, posters = recommend(movie_query)
             
-            # Case insensitive match checking to secure data index lookup
-            matching_movies = movies[movies['title'].str.lower() == movie_query.lower()]
-            
-            if matching_movies.empty:
-                st.error("❌ Movie name match nahi hua! Please list me se kisi movie ka poora naam type ya select karein.")
+            if names is None:
+                st.error("❌ Recommendation failed. Please try another movie.")
             else:
-                exact_title = matching_movies.iloc[0]['title']
-                names, posters = recommend(exact_title)
+                # Loading animation aur posters display ka code
+                st.markdown("""
+                <style>
+                .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
+                .loading span { display: inline-block; animation: bounce 1.4s infinite; }
+                .loading span:nth-child(2) { animation-delay: 0.2s; }
+                .loading span:nth-child(3) { animation-delay: 0.4s; }
+                @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
+                </style>
+                """, unsafe_allow_html=True)
+
+                loading = st.empty()
+                loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
                 
-                if names is None:
-                    st.error("❌ Recommendation system load nahi ho saka. Dobara koshish karein.")
-                else:
-                    # Netflix-style bouncing loading circle
-                    st.markdown("""
-                    <style>
-                    .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
-                    .loading span { display: inline-block; animation: bounce 1.4s infinite; }
-                    .loading span:nth-child(2) { animation-delay: 0.2s; }
-                    .loading span:nth-child(3) { animation-delay: 0.4s; }
-                    @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
-                    </style>
-                    """, unsafe_allow_html=True)
+                loading.empty()
 
-                    loading = st.empty()
-                    loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
-                    
-                    loading.empty()
-
-                    cols = st.columns(5)
-                    for i in range(5):
-                        with cols[i]:
-                            st.markdown(
-                                f"""
-                                <div class="movie-card">
-                                    <img src="{posters[i]}">
-                                    <div class="movie-title">{names[i]}</div>
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
+                cols = st.columns(5)
+                for i in range(5):
+                    with cols[i]:
+                        st.markdown(
+                            f"""
+                            <div class="movie-card">
+                                <img src="{posters[i]}">
+                                <div class="movie-title">{names[i]}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
 except FileNotFoundError:
     st.error("❌ movie_dict.pkl ya similarity.pkl file nahi mili.")
+
 
 
 
