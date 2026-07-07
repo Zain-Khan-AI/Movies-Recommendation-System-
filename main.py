@@ -234,31 +234,55 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Search Box with Native Dropdown (No Extra Widget) ----------
-    left, center, right = st.columns([1, 6, 1])  # Column ratios define karein responsive alignment ke liye
+    # ---------- Center Search Box with Native Dropdown (Single Box Only) ----------
+    left, center, right = st.columns([2, 4, 2])
 
     with center:
-        # 1. Background HTML DataList banayein jo saari movies ko options mein rakhegi
-        # Yeh native browser features use karta hai, isliye click ya type par 0% LAG hoga
+        # 1. Background HTML DataList options tayar karein
         datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
         
-        # 2. Input element browser ko pass karein datalist connection ke sath
+        # 2. Main Search Bar aur Datalist HTML render karein (0% Lag Fix)
         st.markdown(f"""
             <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
                 🎬 Type or Select a Movie
             </label>
-            <input list="movies_suggestions" id="movie_input" name="movie_input" 
+            <input list="movies_suggestions" id="movie_input_html" 
                    placeholder="Type to search (e.g., 'h')..." 
                    style="width:100%; padding:12px; background:#181818; color:white; 
-                          border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:15px;">
+                          border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:15px;"
+                   onchange="parent.postMessage({{type: 'streamlit:setComponentValue', value: this.value}}, '*')">
             <datalist id="movies_suggestions">
                 {datalist_options}
             </datalist>
+            
+            <script>
+                // Browser value to Streamlit value sync script
+                var input = document.getElementById('movie_input_html');
+                input.addEventListener('input', function() {{
+                    window.parent.postMessage({{
+                        isStreamlitMessage: true,
+                        type: 'streamlit:setComponentValue',
+                        value: this.value
+                    }}, '*');
+                }});
+            </script>
         """, unsafe_allow_html=True)
 
-        # 3. Streamlit query param ya session hack ke zariye browser text value receive karein
-        # Taaki jab koi type kare ya select kare toh backend input select ho jaye
-        selected_movie = st.text_input("Confirm Selected Movie Name (For Verification):", key="movie_verifier", label_visibility="collapsed", placeholder="Please select or re-type movie name to lock choice")
+        # 🔥 CHOTI TRICK: Dusre box ko label_visibility="collapsed" aur empty value ke sath bilkul GAYAB (Invisible) kar diya
+        selected_movie = st.text_input(
+            "hidden_input", 
+            key="movie_verifier", 
+            label_visibility="collapsed"
+        )
+        
+        # CSS se visually completely block kar diya taaki screen par bilkul na dikhe
+        st.markdown("""
+            <style>
+                div[data-testid="stTextInput"] {
+                    display: none !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -266,6 +290,7 @@ try:
             "🎬 Show Recommendations",
             use_container_width=True
         )
+
 
 
     if show:
