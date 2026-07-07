@@ -234,31 +234,31 @@ try:
     # 🔥 CHANGE HERE: Standard list call karein function ke zariye
     movie_list = get_clean_movie_list(movies)
 
-    # ---------- Center Select Box & Autocomplete Hack ----------
-    left, center, right = st.columns([2, 4, 2])
+    # ---------- Center Search Box with Native Dropdown (No Extra Widget) ----------
+    left, center, right = st.columns([1, 6, 1])  # Column ratios define karein responsive alignment ke liye
 
     with center:
-        # 1. Pehle user se input box mein naam type karwayenge (Isse click par lag 0% ho jayega)
-        search_query = st.text_input("🍿 Search Movie Name Here (Type characters e.g., 'h'):")
+        # 1. Background HTML DataList banayein jo saari movies ko options mein rakhegi
+        # Yeh native browser features use karta hai, isliye click ya type par 0% LAG hoga
+        datalist_options = "".join([f'<option value="{movie}">' for movie in movie_list])
+        
+        # 2. Input element browser ko pass karein datalist connection ke sath
+        st.markdown(f"""
+            <label style="font-weight:bold; font-size:16px; color:white; display:block; margin-bottom:8px;">
+                🎬 Type or Select a Movie
+            </label>
+            <input list="movies_suggestions" id="movie_input" name="movie_input" 
+                   placeholder="Type to search (e.g., 'h')..." 
+                   style="width:100%; padding:12px; background:#181818; color:white; 
+                          border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:15px;">
+            <datalist id="movies_suggestions">
+                {datalist_options}
+            </datalist>
+        """, unsafe_allow_html=True)
 
-        # 2. Agar user ne kuch type kiya hai, toh list ko filter karenge
-        if search_query:
-            # Sirf wahi movies filter hongi jismein user ka type kiya hua character hoga
-            filtered_movies = [movie for movie in movie_list if search_query.lower() in movie.lower()]
-            
-            if filtered_movies:
-                # Agar movies mil gayin, toh filtered dropdown samne aayega (Maximum 20 options taaki freeze na ho)
-                selected_movie = st.selectbox(
-                    "🎯 Select the exact movie from matches:", 
-                    options=filtered_movies[:20]
-                )
-            else:
-                st.warning("⚠️ No matching movies found. Check spelling!")
-                selected_movie = None
-        else:
-            # Agar box khali hai toh dropdown gayab rahega aur user ko message dikhega
-            st.info("💡 Type above to see movie recommendations in dropdown.")
-            selected_movie = None
+        # 3. Streamlit query param ya session hack ke zariye browser text value receive karein
+        # Taaki jab koi type kare ya select kare toh backend input select ho jaye
+        selected_movie = st.text_input("Confirm Selected Movie Name (For Verification):", key="movie_verifier", label_visibility="collapsed", placeholder="Please select or re-type movie name to lock choice")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
