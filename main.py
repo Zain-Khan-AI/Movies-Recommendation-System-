@@ -248,7 +248,7 @@ try:
                     🎬 Type or Select a Movie
                 </label>
                 <input list="movies_suggestions" id="movie_input_html" autocomplete="off"
-                       placeholder="Type to search (e.g., 'h')..." 
+                       placeholder="Type to search (e.g., 'avatar')..." 
                        style="width:100%; padding:12px; background:#181818; color:white; 
                               border:1px solid #333; border-radius:8px; font-size:16px; margin-bottom:15px;
                               box-sizing: border-box;">
