@@ -177,8 +177,19 @@ def load_base_files():
 # ==========================================
 # RECOMMEND FUNCTION
 # ==========================================
+# ==========================================
+# RECOMMEND FUNCTION (Error Handling Ke Sath)
+# ==========================================
 def recommend(movie):
-    movie_index = movies[movies['title'] == movie].index[0]
+    # 1. Check karein ke jo movie user ne search ki hai kya woh dataset mein hai?
+    matching_movies = movies[movies['title'] == movie]
+    
+    # 2. Agar movie nahi milti toh khali return kar dein taaki app crash na ho
+    if matching_movies.empty:
+        return None, None
+
+    # 3. Agar movie mil jaye toh uska sahi index nikalein
+    movie_index = matching_movies.index[0]
     distances = similarity[movie_index]
 
     movies_list = sorted(
@@ -191,18 +202,12 @@ def recommend(movie):
     recommended_posters = []
 
     for i in movies_list:
-
         movie_id = movies.iloc[i[0]].movie_id
-
-        recommended_movies.append(
-            movies.iloc[i[0]].title
-        )
-
-        recommended_posters.append(
-            fetch_poster(movie_id)
-        )
+        recommended_movies.append(movies.iloc[i[0]].title)
+        recommended_posters.append(fetch_poster(movie_id))
 
     return recommended_movies, recommended_posters
+
 
 
 # ==========================================
@@ -294,75 +299,45 @@ try:
         )
 
     if show:
+        # Check karein ke input khali toh nahi hai
+        if not selected_movie or selected_movie.strip() == "":
+            st.warning("⚠️ Please select or type a movie name first!")
+        else:
+            # Code crash se bachne ke liye safe recommendation call karein
+            names, posters = recommend(selected_movie)
+            
+            if names is None:
+                st.error("❌ Movie name match nahi hua! Please dropdown se sahi aur poora naam select karein.")
+            else:
+                # Loading animation aur baqi posters display ka code yahan chalega
+                st.markdown("""
+                <style>
+                .loading { text-align: center; color: white; font-size: 22px; font-weight: bold; margin-top: 20px; }
+                .loading span { display: inline-block; animation: bounce 1.4s infinite; }
+                .loading span:nth-child(2) { animation-delay: 0.2s; }
+                .loading span:nth-child(3) { animation-delay: 0.4s; }
+                @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.4; } 40% { transform: translateY(-8px); opacity: 1; } }
+                </style>
+                """, unsafe_allow_html=True)
 
-        st.markdown("""
-        <style>
+                loading = st.empty()
+                loading.markdown('<div class="loading">Finding Similar Movies<span>.</span><span>.</span><span>.</span></div>', unsafe_allow_html=True)
+                
+                loading.empty()
 
-        .loading {
-            text-align: center;
-            color: white;
-            font-size: 22px;
-            font-weight: bold;
-            margin-top: 20px;
-        }
+                cols = st.columns(5)
+                for i in range(5):
+                    with cols[i]:
+                        st.markdown(
+                            f"""
+                            <div class="movie-card">
+                                <img src="{posters[i]}">
+                                <div class="movie-title">{names[i]}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
-        .loading span {
-            display: inline-block;
-            animation: bounce 1.4s infinite;
-        }
-
-        .loading span:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .loading span:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes bounce {
-            0%, 80%, 100% {
-                transform: translateY(0);
-                opacity: 0.4;
-            }
-            40% {
-                transform: translateY(-8px);
-                opacity: 1;
-            }
-        }
-
-        </style>
-        """, unsafe_allow_html=True)
-
-        loading = st.empty()
-
-        loading.markdown("""
-        <div class="loading">
-        Finding Similar Movies
-        <span>.</span><span>.</span><span>.</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        names, posters = recommend(selected_movie)
-
-        loading.empty()
-
-        cols = st.columns(5)
-
-        for i in range(5):
-
-            with cols[i]:
-
-                st.markdown(
-                    f"""
-                    <div class="movie-card">
-                        <img src="{posters[i]}">
-                        <div class="movie-title">
-                            {names[i]}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
 
 except FileNotFoundError:
 
