@@ -68,15 +68,9 @@ streamlit run main.py
 
 ---
 
-## 📸 Screenshots
-
-Add screenshots of your application here.
-
----
-
 ## 🌐 Live Demo
 
-Add your deployed Streamlit application link here.
+https://movies-recommendation-system-web.streamlit.app/
 
 ---
 
